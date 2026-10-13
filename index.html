@@ -246,6 +246,7 @@
   function product(...values) { return values.some(v=>v===null)?null:safeResult(values.reduce((a,b)=>a*b,1)); }
   function sum(values) { return values.some(v=>v===null)?null:safeResult(values.reduce((a,b)=>a+b,0)); }
   function amount(n) { return n===null?'—':moneyFormatter.format(Object.is(n,-0)?0:n); }
+  function hours(n) { return n===null?'—':moneyFormatter.format(Object.is(n,-0)?0:n); }
   function number(n) { return n===null?'—':numberFormatter.format(Object.is(n,-0)?0:n); }
   function escapeHTML(value) { return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
   function serializedData(data) { return JSON.stringify(data).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029'); }
@@ -369,7 +370,7 @@
   function dragLabel(activity) { return 'Aktivität '+escapeHTML(activityName(activity))+' verschieben'; }
   function renderEditor() { byId('phases-list').innerHTML=editorMarkup(state); }
   function renderCosts(result) {
-    const cells=(totals,overnightStays,travelHours)=>costKeys.map(key=>`<td>${amount(totals[key])}</td>`+(key==='travel'?`<td class="hours-count">${number(travelHours)}</td>`:'')+(key==='hotel'?`<td class="overnight-count">${number(overnightStays)}</td>`:'')).join('');
+    const cells=(totals,overnightStays,travelHours)=>costKeys.map(key=>`<td>${amount(totals[key])}</td>`+(key==='travel'?`<td class="hours-count">${hours(travelHours)}</td>`:'')+(key==='hotel'?`<td class="overnight-count">${number(overnightStays)}</td>`:'')).join('');
     byId('cost-body').innerHTML=state.phases.map((phase,i)=>{
       const calculated=result.phases[i];
       return `<tr class="phase-subtotal"><th scope="row"><span class="phase-index">${String(i+1).padStart(2,'0')}</span>${escapeHTML(phaseName(phase))}</th>${cells(calculated.totals,calculated.overnightStays,calculated.travelHours)}<td>${amount(calculated.total)}</td></tr>`+
@@ -413,15 +414,15 @@
   }
   function update() {
     const result=calculate(state);lastResult=result;
-    setText('total-cost',amount(result.total));setText('travel-hours',number(result.travelHours));setText('travel-cost',amount(result.totals.travel));setText('expenses-cost',amount(result.expenses));
+    setText('total-cost',amount(result.total));setText('travel-hours',hours(result.travelHours));setText('travel-cost',amount(result.totals.travel));setText('expenses-cost',amount(result.expenses));
     setText('total-cost-eur',amount(result.eur.total));setText('travel-cost-eur',amount(result.eur.travel));setText('expenses-cost-eur',amount(result.eur.expenses));
     const phaseCount=state.phases.length,activityCount=state.phases.reduce((total,p)=>total+p.activities.length,0);
     setText('project-count',phaseCount+' '+(phaseCount===1?'Projektphase':'Projektphasen')+' · '+activityCount+' '+(activityCount===1?'Aktivität':'Aktivitäten'));
     setText('hint-oneWayKm',number(product(2,result.rates.oneWayKm))+' km hin und zurück');
-    setText('hint-oneWayMinutes',number(product(2,result.rates.oneWayMinutes))+' min ('+number(product(2,result.rates.oneWayMinutes,1/60))+' h) hin und zurück');
+    setText('hint-oneWayMinutes',number(product(2,result.rates.oneWayMinutes))+' min ('+hours(product(2,result.rates.oneWayMinutes,1/60))+' h) hin und zurück');
     result.phases.forEach((phase,index)=>{
       setText('phase-total-'+phase.id,amount(phase.total)+' CHF');
-      setText('phase-hours-'+phase.id,number(phase.travelHours)+' h');
+      setText('phase-hours-'+phase.id,hours(phase.travelHours)+' h');
       setText('phase-label-'+phase.id,phaseName(state.phases[index]));
       phase.activities.forEach(activity=>setText('activity-total-'+activity.id,amount(activity.total)));
     });
