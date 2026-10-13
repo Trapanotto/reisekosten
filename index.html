@@ -80,6 +80,14 @@
     .remove-activity{min-height:38px;width:38px;padding:8px;border-color:transparent;background:transparent;color:#66748b}
     .remove-activity:hover{color:var(--red);background:#fff4f2;border-color:#f2bdb7}
     .activity-actions{padding:13px 18px}
+    .activity-name{display:flex;align-items:center;gap:4px}
+    .activity-table tbody th{padding-left:6px}
+    .drag-activity{flex-shrink:0;min-height:38px;width:28px;padding:0;border-color:transparent;background:transparent;color:#8a96aa;cursor:grab;touch-action:none}
+    .drag-activity:hover{color:var(--ink);background:#f2f5fb;border-color:transparent}
+    .drag-activity:focus-visible{outline:2px solid #9db7fb;outline-offset:1px}
+    .activity-table tr.dragging th,.activity-table tr.dragging td{background:var(--pale)}
+    .activity-table tr.dragging .drag-activity{cursor:grabbing;color:var(--blue)}
+    body.sorting,body.sorting *{cursor:grabbing!important;user-select:none}
     .cost-table{min-width:1140px}
     .cost-table thead th:first-child,.cost-table tbody th,.cost-table tfoot th{position:sticky;left:0;z-index:1;box-shadow:1px 0 var(--line);padding-left:22px}
     .cost-table thead th:first-child{width:270px}
@@ -116,7 +124,7 @@
     @media(max-width:380px){.summary{grid-template-columns:1fr}.primary-metric{grid-column:auto}main{padding:16px}.header-inner{padding:16px}.rate-grid{grid-template-columns:1fr}.phase-total{flex-basis:100%}.quiet-danger{width:100%}.title-separator{display:none}}
     @media print{
       @page{size:A4 landscape;margin:10mm}
-      body{background:white;font-size:10pt}.app-header{border:0}.header-inner{padding:0 0 12px;display:block}.brand-mark,.actions,.project-line,.edit-project,#project-title-input,.activity-actions,.quiet-danger,.remove-activity,.scroll-hint,#toast{display:none!important}
+      body{background:white;font-size:10pt}.app-header{border:0}.header-inner{padding:0 0 12px;display:block}.brand-mark,.actions,.project-line,.edit-project,#project-title-input,.activity-actions,.quiet-danger,.remove-activity,.drag-activity,.scroll-hint,#toast{display:none!important}
       .panel{margin-top:12px;border-radius:0;overflow:visible}.section-head{padding:10px 12px}.section-head button{display:none}.section-number{background:none}.rate-grid{grid-template-columns:repeat(6,1fr);padding:12px;gap:10px}.field-label{font-size:8pt}.field-hint{font-size:7pt}.input-unit input,input{min-height:25px;border-color:transparent;background:transparent!important;padding:2px 5px;font-size:9pt}.phases-list{padding:10px}.phase-block{border-radius:0;overflow:visible;break-inside:auto}.phase-block+.phase-block{margin-top:14px}.phase-header{padding:8px 10px;flex-wrap:nowrap;break-after:avoid}.phase-name-input{font-size:11pt;flex:1;max-width:none;flex-basis:auto}.phase-total{margin-left:auto;flex:0 0 auto;text-align:right}.phase-total strong{font-size:10pt}.table-scroll{overflow:visible}
       table{font-size:9pt}.activity-table,.cost-table{min-width:0}.activity-table th,.activity-table td,th,td{padding:5px!important}.activity-table input{font-size:9pt;min-height:24px;padding:2px 4px}.activity-table .activity-total{font-size:9pt}.activity-name-col{width:190px}.cars-col{width:105px}.activity-cost-col{width:120px}.remove-col{width:0}.activity-table th:last-child,.activity-table td:last-child{display:none}.activity-table thead th:first-child,.activity-table tbody th,.cost-table thead th:first-child,.cost-table tbody th,.cost-table tfoot th{position:static;box-shadow:none}.cost-table thead th:first-child{width:230px}.cost-table thead th:last-child{width:110px}.cost-table thead th.nights-col,.cost-table thead th.hours-col{width:105px}.cost-table .activity-name-cell{padding-left:18px!important}.cost-table td{font-size:9pt}thead th{height:35px;font-size:8pt}.head-note{font-size:8pt}.footnote{font-size:8pt;padding:8px 12px}.issues{font-size:9pt}h2{font-size:10pt}tr{break-inside:avoid}thead{display:table-header-group}
     }
@@ -264,6 +272,15 @@
     phase.activities.push(activity);
     return activity;
   }
+  function moveActivity(data,phaseId,activityId,targetIndex) {
+    const phase=getPhase(data,phaseId);
+    const index=phase.activities.findIndex(a=>a.id===activityId);
+    if(index<0) throw new Error('Aktivität nicht gefunden.');
+    const target=Math.max(0,Math.min(phase.activities.length-1,targetIndex));
+    if(target===index)return false;
+    phase.activities.splice(target,0,...phase.activities.splice(index,1));
+    return true;
+  }
   function removePhase(data,phaseId) {
     const index=data.phases.findIndex(p=>p.id===phaseId);
     if(index<0) throw new Error('Projektphase nicht gefunden.');
@@ -329,8 +346,8 @@
       <div class="table-scroll" role="region" aria-label="Aktivitäten · ${escapeHTML(phaseName(phase))}" id="activity-region-${phase.id}" tabindex="0">
         <table class="activity-table"><caption class="sr-only">Aktivitäten · ${escapeHTML(phaseName(phase))}</caption><colgroup><col class="activity-name-col"><col><col><col><col><col class="cars-col"><col class="activity-cost-col"><col class="remove-col"></colgroup>
           <thead><tr><th scope="col">Aktivität</th><th scope="col">Mitarbeiter</th><th scope="col">Tage</th><th scope="col" title="0 = keine Übernachtungen. Pro Hotelzyklus sind mindestens 2 Tage erforderlich.">Hotelzyklen</th><th scope="col">Fahrten</th><th scope="col" title="Gesamtzahl der eingesetzten Autos je Aktivität">Autos</th><th scope="col">Kosten (CHF)</th><th scope="col"><span class="sr-only">Entfernen</span></th></tr></thead>
-          <tbody>${phase.activities.map(activity=>`<tr>
-            <th scope="row"><input type="text" id="activity-${activity.id}-name" data-phase="${escapeHTML(phase.id)}" data-activity="${escapeHTML(activity.id)}" data-field="name" value="${escapeHTML(activity.name)}" aria-label="Aktivitätsname · ${escapeHTML(phaseName(phase))} · ${escapeHTML(activityName(activity))}" autocomplete="off" maxlength="160"></th>
+          <tbody>${phase.activities.map(activity=>`<tr data-activity-row="${escapeHTML(activity.id)}">
+            <th scope="row"><div class="activity-name"><button type="button" id="drag-activity-${activity.id}" class="drag-activity" data-phase="${escapeHTML(phase.id)}" data-drag-activity="${escapeHTML(activity.id)}" aria-label="${dragLabel(activity)}" title="Ziehen oder mit Pfeiltasten verschieben"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" stroke-width="3.2" stroke-linecap="round"/></svg></button><input type="text" id="activity-${activity.id}-name" data-phase="${escapeHTML(phase.id)}" data-activity="${escapeHTML(activity.id)}" data-field="name" value="${escapeHTML(activity.name)}" aria-label="Aktivitätsname · ${escapeHTML(phaseName(phase))} · ${escapeHTML(activityName(activity))}" autocomplete="off" maxlength="160"></div></th>
             ${fields.map(f=>`<td><input type="text" id="activity-${activity.id}-${f.key}" inputmode="decimal" data-phase="${escapeHTML(phase.id)}" data-activity="${escapeHTML(activity.id)}" data-field="${f.key}" value="${escapeHTML(activity[f.key])}" aria-label="${f.label} · ${escapeHTML(phaseName(phase))} · ${escapeHTML(activityName(activity))}" autocomplete="off"></td>`).join('')}
             <td class="activity-total" id="activity-total-${activity.id}">—</td>
             <td><button type="button" id="remove-activity-${activity.id}" class="remove-activity" data-phase="${escapeHTML(phase.id)}" data-remove-activity="${escapeHTML(activity.id)}" aria-label="Aktivität ${escapeHTML(activityName(activity))} aus ${escapeHTML(phaseName(phase))} entfernen" title="Aktivität entfernen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg></button></td>
@@ -340,6 +357,7 @@
       <div class="activity-actions"><button type="button" id="add-activity-${phase.id}" data-add-activity="${escapeHTML(phase.id)}">+ Aktivität hinzufügen</button></div>
     </section>`).join('');
   }
+  function dragLabel(activity) { return 'Aktivität '+escapeHTML(activityName(activity))+' verschieben'; }
   function renderEditor() { byId('phases-list').innerHTML=editorMarkup(state); }
   function renderCosts(result) {
     const cells=(totals,overnightStays,travelHours)=>costKeys.map(key=>`<td>${amount(totals[key])}</td>`+(key==='travel'?`<td class="hours-count">${number(travelHours)}</td>`:'')+(key==='hotel'?`<td class="overnight-count">${number(overnightStays)}</td>`:'')).join('');
@@ -447,6 +465,38 @@
     renderEditor();changed();
     (activityId?byId('add-activity-'+phaseId):byId('add-phase')).focus();
   }
+  function reorderActivity(phaseId,activityId,targetIndex) {
+    if(!moveActivity(state,phaseId,activityId,targetIndex))return false;
+    renderEditor();changed();byId('drag-activity-'+activityId).focus();
+    return true;
+  }
+  let sorting=null;
+  function sortRows(tbody,row) { return [...tbody.rows].filter(r=>r!==row); }
+  function startSort(event) {
+    const handle=event.target.closest('.drag-activity');
+    if(!handle||sorting||(event.pointerType==='mouse'&&event.button!==0))return;
+    event.preventDefault();
+    const row=handle.closest('tr');
+    sorting={handle,row,tbody:row.parentElement,phaseId:handle.dataset.phase,activityId:handle.dataset.dragActivity,pointerId:event.pointerId,startIndex:row.sectionRowIndex};
+    try{handle.setPointerCapture(event.pointerId);}catch(error){}
+    row.classList.add('dragging');document.body.classList.add('sorting');
+  }
+  function moveSort(event) {
+    if(!sorting||event.pointerId!==sorting.pointerId)return;
+    event.preventDefault();
+    const {row,tbody}=sorting,others=sortRows(tbody,row);
+    const next=others.find(r=>{const rect=r.getBoundingClientRect();return event.clientY<rect.top+rect.height/2;})||null;
+    if(row.nextElementSibling!==next||(next===null&&tbody.lastElementChild!==row))tbody.insertBefore(row,next);
+    if(event.clientY<40)window.scrollBy(0,-12);else if(event.clientY>window.innerHeight-40)window.scrollBy(0,12);
+  }
+  function endSort(event,commit) {
+    if(!sorting||event.pointerId!==sorting.pointerId)return;
+    const {handle,row,phaseId,activityId,startIndex}=sorting;sorting=null;
+    try{handle.releasePointerCapture(event.pointerId);}catch(error){}
+    row.classList.remove('dragging');document.body.classList.remove('sorting');
+    const index=row.sectionRowIndex;
+    if(!commit||index===startIndex||!reorderActivity(phaseId,activityId,index)){renderEditor();update();byId('drag-activity-'+activityId).focus();}
+  }
   function saveSnapshot() {
     finishProjectEdit(true);
     const snapshot=JSON.parse(JSON.stringify(state));snapshot.exportedAt=new Date().toISOString();
@@ -533,6 +583,7 @@
       const suffix=' · '+phaseName(phase)+' · '+activityName(activity);
       byId('activity-'+activity.id+'-name').setAttribute('aria-label','Aktivitätsname'+suffix);
       fields.forEach(f=>byId('activity-'+activity.id+'-'+f.key).setAttribute('aria-label',f.label+suffix));
+      byId('drag-activity-'+activity.id).setAttribute('aria-label','Aktivität '+activityName(activity)+' verschieben');
       byId('remove-activity-'+activity.id).setAttribute('aria-label','Aktivität '+activityName(activity)+' aus '+phaseName(phase)+' entfernen');
     }
   }
@@ -569,6 +620,17 @@
     if(button.dataset.addActivity){const activity=addActivity(button.dataset.addActivity),input=byId('activity-'+activity.id+'-name');input.focus();input.select();}
     else if(button.dataset.removeActivity)removeEntry(button.dataset.phase,button.dataset.removeActivity);
     else if(button.dataset.removePhase)removeEntry(button.dataset.removePhase);
+  });
+  byId('phases-list').addEventListener('pointerdown',startSort);
+  byId('phases-list').addEventListener('pointermove',moveSort);
+  byId('phases-list').addEventListener('pointerup',event=>endSort(event,true));
+  byId('phases-list').addEventListener('pointercancel',event=>endSort(event,false));
+  byId('phases-list').addEventListener('keydown',event=>{
+    const handle=event.target.closest('.drag-activity');if(!handle)return;
+    const steps={ArrowUp:-1,ArrowDown:1};if(!(event.key in steps))return;
+    event.preventDefault();
+    const phase=getPhase(state,handle.dataset.phase),index=phase.activities.findIndex(a=>a.id===handle.dataset.dragActivity);
+    if(index>=0&&reorderActivity(phase.id,handle.dataset.dragActivity,index+steps[event.key]))toast('„'+activityName(phase.activities[index+steps[event.key]])+'“ an Position '+(index+steps[event.key]+1)+' verschoben.');
   });
   byId('save-button').addEventListener('click',saveHTML);
   byId('cancel-save').addEventListener('click',()=>byId('save-dialog').close());
