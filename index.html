@@ -62,6 +62,8 @@
     .phase-total{margin-left:auto;white-space:nowrap;text-align:right}
     .phase-total span{display:block;font-size:.75rem;color:var(--muted)}
     .phase-total strong{font-size:1rem;font-weight:700;font-variant-numeric:tabular-nums}
+    .phase-total+.phase-total{margin-left:0}
+    .phase-hours strong{font-weight:600}
     .quiet-danger{color:var(--muted);font-weight:500;background:transparent}
     .quiet-danger:hover{color:var(--red);background:#fff4f2;border-color:#f2bdb7}
     .table-scroll{overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-color:#b9c5d8 #f1f4f9}
@@ -339,6 +341,7 @@
         <h3 class="sr-only" id="phase-label-${phase.id}">${escapeHTML(phaseName(phase))}</h3>
         <span class="phase-number" aria-hidden="true">${String(index+1).padStart(2,'0')}</span>
         <input type="text" class="phase-name-input" id="phase-name-${phase.id}" data-phase-name="${escapeHTML(phase.id)}" value="${escapeHTML(phase.name)}" aria-label="Name der Projektphase ${index+1}" maxlength="160" autocomplete="off">
+        <div class="phase-total phase-hours"><span>Fahrtstunden</span><strong id="phase-hours-${phase.id}">—</strong></div>
         <div class="phase-total"><span>Total Phase</span><strong id="phase-total-${phase.id}">—</strong></div>
         <button type="button" class="quiet-danger" data-remove-phase="${escapeHTML(phase.id)}" id="remove-phase-${phase.id}" aria-label="Projektphase ${escapeHTML(phaseName(phase))} entfernen">Phase entfernen</button>
       </div>
@@ -412,6 +415,7 @@
     setText('hint-oneWayHours',number(product(2,result.rates.oneWayHours))+' h hin und zurück');
     result.phases.forEach((phase,index)=>{
       setText('phase-total-'+phase.id,amount(phase.total)+' CHF');
+      setText('phase-hours-'+phase.id,number(phase.travelHours)+' h');
       setText('phase-label-'+phase.id,phaseName(state.phases[index]));
       phase.activities.forEach(activity=>setText('activity-total-'+activity.id,amount(activity.total)));
     });
