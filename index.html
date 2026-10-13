@@ -170,7 +170,7 @@
     <section class="panel" aria-labelledby="rates-heading">
       <div class="section-head"><h2 id="rates-heading"><span class="section-number">01</span>Reise- und Kostensätze</h2><span class="head-note">Für alle Projektphasen</span></div>
       <div class="rate-grid">
-        <label class="field"><span class="field-label">Fahrtzeit einfach</span><span class="input-unit"><input type="text" id="rate-oneWayHours" inputmode="decimal" data-rate="oneWayHours" autocomplete="off" aria-describedby="hint-oneWayHours"><span class="suffix">h</span></span><span class="field-hint" id="hint-oneWayHours">3 h hin und zurück</span></label>
+        <label class="field"><span class="field-label">Fahrtzeit einfach</span><span class="input-unit"><input type="text" id="rate-oneWayMinutes" inputmode="decimal" data-rate="oneWayMinutes" autocomplete="off" aria-describedby="hint-oneWayMinutes"><span class="suffix">min</span></span><span class="field-hint" id="hint-oneWayMinutes">180 min (3 h) hin und zurück</span></label>
         <label class="field"><span class="field-label">Strecke einfach</span><span class="input-unit"><input type="text" id="rate-oneWayKm" inputmode="decimal" data-rate="oneWayKm" autocomplete="off" aria-describedby="hint-oneWayKm"><span class="suffix">km</span></span><span class="field-hint" id="hint-oneWayKm">—</span></label>
         <label class="field"><span class="field-label">Reisestundensatz</span><span class="input-unit"><input type="text" id="rate-hourlyRate" inputmode="decimal" data-rate="hourlyRate" autocomplete="off" aria-describedby="hint-hourlyRate"><span class="suffix">CHF</span></span><span class="field-hint" id="hint-hourlyRate">Je Person und Fahrtstunde</span></label>
         <label class="field"><span class="field-label">Kilometersatz</span><span class="input-unit"><input type="text" id="rate-kmRate" inputmode="decimal" data-rate="kmRate" autocomplete="off" aria-describedby="hint-kmRate"><span class="suffix">CHF</span></span><span class="field-hint" id="hint-kmRate">Je Auto und Kilometer</span></label>
@@ -203,7 +203,7 @@
   <span id="save-status" class="sr-only" role="status"></span>
   <div id="toast" role="status" aria-live="polite"></div>
   <script type="application/json" id="app-data">
-{"version":5,"project":"","exportedAt":"2026-09-29T09:41:31.570Z","rates":{"oneWayHours":"1.5","oneWayKm":"115","hourlyRate":"150","kmRate":"1.4","mealRate":"70","hotelRate":"150"},"phases":[{"id":"phase-1","name":"Ausbaustufe 1","activities":[{"id":"analyse","name":"Analyse","employees":"4","days":"2","cycles":"1","trips":"1","cars":"2"},{"id":"schulung","name":"Schulung","employees":"1","days":"5","cycles":"1","trips":"1","cars":"1"},{"id":"komponententest","name":"Komponententest","employees":"3","days":"40","cycles":"8","trips":"8","cars":"1"},{"id":"integrationstest","name":"Integrationstest","employees":"4","days":"20","cycles":"4","trips":"4","cars":"2"},{"id":"uat","name":"UAT","employees":"4","days":"2","cycles":"1","trips":"1","cars":"2"},{"id":"produktion","name":"Produktionsbegleitung","employees":"2","days":"10","cycles":"2","trips":"2","cars":"1"}]}],"eurChfRate":"0.93"}
+{"version":6,"project":"","exportedAt":"2026-09-29T09:41:31.570Z","rates":{"oneWayMinutes":"90","oneWayKm":"115","hourlyRate":"150","kmRate":"1.4","mealRate":"70","hotelRate":"150"},"phases":[{"id":"phase-1","name":"Ausbaustufe 1","activities":[{"id":"analyse","name":"Analyse","employees":"4","days":"2","cycles":"1","trips":"1","cars":"2"},{"id":"schulung","name":"Schulung","employees":"1","days":"5","cycles":"1","trips":"1","cars":"1"},{"id":"komponententest","name":"Komponententest","employees":"3","days":"40","cycles":"8","trips":"8","cars":"1"},{"id":"integrationstest","name":"Integrationstest","employees":"4","days":"20","cycles":"4","trips":"4","cars":"2"},{"id":"uat","name":"UAT","employees":"4","days":"2","cycles":"1","trips":"1","cars":"2"},{"id":"produktion","name":"Produktionsbegleitung","employees":"2","days":"10","cycles":"2","trips":"2","cars":"1"}]}],"eurChfRate":"0.93"}
   </script>
   <script id="app-code">
 (() => {
@@ -211,8 +211,13 @@
   const documentTemplate = '<!doctype html>\n' + document.documentElement.outerHTML;
   const state = JSON.parse(document.getElementById('app-data').textContent);
   state.eurChfRate??='';
+  if(state.rates.oneWayMinutes===undefined) {
+    const raw=state.rates.oneWayHours??'',hours=parseNumber(raw);
+    state.rates.oneWayMinutes=hours===null?String(raw):String(Math.round(hours*60*100)/100);
+  }
+  delete state.rates.oneWayHours;
   const byId = id => document.getElementById(id);
-  const rateLabels = {oneWayHours:'Fahrtzeit einfach',oneWayKm:'Strecke einfach',hourlyRate:'Reisestundensatz',kmRate:'Kilometersatz',mealRate:'Verpflegungssatz',hotelRate:'Hotelsatz'};
+  const rateLabels = {oneWayMinutes:'Fahrtzeit einfach',oneWayKm:'Strecke einfach',hourlyRate:'Reisestundensatz',kmRate:'Kilometersatz',mealRate:'Verpflegungssatz',hotelRate:'Hotelsatz'};
   const fields = [
     {key:'employees',label:'Mitarbeiter'}, {key:'days',label:'Tage'},
     {key:'cycles',label:'Hotelzyklen'}, {key:'trips',label:'Fahrten'},
@@ -296,6 +301,7 @@
   }
   function calculate(data) {
     const rates=Object.fromEntries(Object.entries(data.rates).map(([k,v])=>[k,parseNumber(v)]));
+    const oneWayHours=product(rates.oneWayMinutes,1/60);
     const phases=data.phases.map(phase=>{
       const activities=phase.activities.map(activity=>{
         const inputs=Object.fromEntries(fields.map(f=>[f.key,parseNumber(activity[f.key])]));
@@ -303,9 +309,9 @@
         const invalidHotelCycles=hotelCyclesExceedDays(days,cycles);
         const hotelNights=cycles===0?0:days===null||cycles===null||invalidHotelCycles?null:safeResult((days/cycles-1)*cycles);
         const overnightStays=cycles===0?0:product(employees,hotelNights);
-        const travelHours=product(2,rates.oneWayHours,employees,trips);
+        const travelHours=product(2,oneWayHours,employees,trips);
         const costs={
-          travel:product(2,rates.oneWayHours,employees,trips,rates.hourlyRate),
+          travel:product(2,oneWayHours,employees,trips,rates.hourlyRate),
           driving:product(2,rates.oneWayKm,rates.kmRate,trips,cars),
           meals:product(employees,days,rates.mealRate),
           hotel:cycles===0?0:product(rates.hotelRate,employees,hotelNights)
@@ -412,7 +418,7 @@
     const phaseCount=state.phases.length,activityCount=state.phases.reduce((total,p)=>total+p.activities.length,0);
     setText('project-count',phaseCount+' '+(phaseCount===1?'Projektphase':'Projektphasen')+' · '+activityCount+' '+(activityCount===1?'Aktivität':'Aktivitäten'));
     setText('hint-oneWayKm',number(product(2,result.rates.oneWayKm))+' km hin und zurück');
-    setText('hint-oneWayHours',number(product(2,result.rates.oneWayHours))+' h hin und zurück');
+    setText('hint-oneWayMinutes',number(product(2,result.rates.oneWayMinutes))+' min ('+number(product(2,result.rates.oneWayMinutes,1/60))+' h) hin und zurück');
     result.phases.forEach((phase,index)=>{
       setText('phase-total-'+phase.id,amount(phase.total)+' CHF');
       setText('phase-hours-'+phase.id,number(phase.travelHours)+' h');
