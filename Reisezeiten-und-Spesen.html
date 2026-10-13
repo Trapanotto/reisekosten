@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="de-CH"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Reisezeiten und Spesen je Projektphase berechnen und zusammen mit allen Eingaben als eine HTML-Datei speichern.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Reisezeiten &amp; Spesen</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231b49d8'/%3E%3Cpath d='M11 10V7h10v3M7 11h18v14H7zM7 17h18M14 16h4v3h-4' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
+  <style>
+    :root{color-scheme:light;--ink:#19243a;--muted:#5f6d82;--blue:#1b49d8;--pale:#f0f4ff;--line:#dfe5ed;--paper:#fff;--bg:#f5f7fb;--navy:#152844;--amber:#95520a;--red:#b42318;--radius:12px}
+    *{box-sizing:border-box}
+    [hidden]{display:none!important}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,"Segoe UI",Arial,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+    button,input{font:inherit}
+    button{cursor:pointer;min-height:44px;border:1px solid var(--line);border-radius:8px;padding:10px 16px;background:white;color:var(--ink);font-size:.875rem;font-weight:650;display:inline-flex;gap:8px;align-items:center;justify-content:center}
+    button:hover{background:#f2f5fb;border-color:#bbc8df}
+    button:disabled{cursor:wait;opacity:.65}
+    :focus-visible{outline:3px solid #749bff;outline-offset:3px}
+    button.primary{background:var(--blue);border-color:var(--blue);color:white;box-shadow:0 2px 5px #183fa621}
+    button.primary:hover{background:#123aba}
+    .icon{width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .app-header{background:white;border-bottom:1px solid var(--line)}
+    .header-inner{max-width:1440px;margin:auto;padding:22px 36px;display:flex;align-items:center;justify-content:space-between;gap:24px}
+    h1{font-size:1.5rem;font-weight:720;letter-spacing:-.025em;line-height:1.35;margin:0;display:flex;align-items:center;flex-wrap:wrap;gap:6px 9px}
+    .actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+    main{max-width:1440px;margin:auto;padding:18px 36px 40px}
+    input{border:1px solid #c9d3e3;background:#fff;border-radius:7px;padding:9px 11px;min-height:43px;color:var(--ink);min-width:0;width:100%;font-variant-numeric:tabular-nums}
+    input:hover{border-color:#8299bd}
+    input:focus{outline:2px solid #9db7fb;outline-offset:1px;border-color:var(--blue);background:white}
+    input[aria-invalid="true"]{border-color:var(--red)!important;background:#fff5f4!important;color:var(--red)!important}
+    .summary{display:grid;grid-template-columns:1.45fr 1fr 1fr;gap:14px;margin-bottom:24px}
+    .metric{background:white;border:1px solid var(--line);border-radius:var(--radius);padding:18px 21px;min-width:0}
+    .metric.primary-metric{background:var(--navy);border-color:var(--navy);color:white}
+    .metric-label{font-size:.875rem;font-weight:600;margin-bottom:6px}
+    .metric-values{display:flex;align-items:baseline;gap:10px 14px;flex-wrap:wrap}
+    .metric-number{font-size:1.875rem;line-height:1.25;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.025em;display:flex;flex-wrap:wrap;align-items:baseline;gap:5px}
+    .metric-values .metric-number{flex-wrap:nowrap;white-space:nowrap}
+    .metric-number.metric-eur{font-size:1.5rem}
+    .metric-number>span:first-child{overflow-wrap:anywhere;min-width:0}
+    .metric-number .unit{font-size:.875rem;letter-spacing:0;font-weight:500;color:var(--muted)}
+    .primary-metric .unit{color:#bcccdf}
+    .metric-note{font-size:.8125rem;color:var(--muted);margin-top:7px}
+    .primary-metric .metric-note{color:#bccde3}
+    .panel{background:white;border:1px solid var(--line);border-radius:var(--radius);margin-top:20px;overflow:hidden}
+    .section-head{padding:19px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line)}
+    h2{font-size:1rem;line-height:1.35;margin:0;font-weight:700;display:flex;align-items:center;gap:10px;letter-spacing:-.01em}
+    .section-number{color:var(--blue);background:var(--pale);border-radius:6px;padding:3px 7px;font-size:.75rem;font-weight:700;letter-spacing:.02em}
+    .head-note{font-size:.8125rem;color:var(--muted);text-align:right}
+    .rate-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:20px;padding:22px}
+    label.field{display:block;min-width:0}
+    .field-label{display:block;font-size:.875rem;font-weight:550;color:var(--ink);margin-bottom:6px}
+    .input-unit{display:block;position:relative}
+    .input-unit input{padding-right:46px;text-align:right}
+    .input-unit .suffix{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);font-size:.8125rem}
+    .field-hint{display:block;color:var(--muted);font-size:.75rem;margin-top:5px;line-height:1.4;min-height:17px}
+    .phases-list{padding:20px 22px}
+    .phase-block{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+    .phase-block+.phase-block{margin-top:22px}
+    .phase-header{display:flex;align-items:center;gap:13px;padding:16px 18px;background:#f7f9fe;border-bottom:1px solid var(--line)}
+    .phase-number{font-size:.8125rem;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums}
+    .phase-name-input{flex:1;max-width:420px}
+    .phase-total{margin-left:auto;white-space:nowrap;text-align:right}
+    .phase-total span{display:block;font-size:.75rem;color:var(--muted)}
+    .phase-total strong{font-size:1rem;font-weight:700;font-variant-numeric:tabular-nums}
+    .quiet-danger{color:var(--muted);font-weight:500;background:transparent}
+    .quiet-danger:hover{color:var(--red);background:#fff4f2;border-color:#f2bdb7}
+    .table-scroll{overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-color:#b9c5d8 #f1f4f9}
+    table{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;font-size:.875rem}
+    th,td{padding:11px 12px;vertical-align:middle;text-align:right;border-bottom:1px solid #e9edf3;font-variant-numeric:tabular-nums}
+    thead th{background:#f8fafe;color:var(--muted);font-weight:600;font-size:.8125rem;text-align:center;height:50px;overflow-wrap:anywhere;line-height:1.4}
+    thead th:first-child{text-align:left}
+    tbody th,tfoot th{text-align:left;font-weight:500;background:white;color:var(--ink)}
+    .activity-table{min-width:1070px}
+    .activity-name-col{width:230px}.cars-col{width:120px}.activity-cost-col{width:145px}.remove-col{width:58px}
+    .activity-table th,.activity-table td{padding:8px 10px}
+    .activity-table thead th:first-child,.activity-table tbody th{position:sticky;left:0;z-index:1;box-shadow:1px 0 var(--line);padding-left:18px}
+    .activity-table input{font-size:1rem;text-align:right}
+    .activity-table th input{text-align:left;font-weight:400}
+    .activity-total{font-weight:600;white-space:nowrap;font-size:.9375rem}
+    .remove-activity{min-height:38px;width:38px;padding:8px;border-color:transparent;background:transparent;color:#66748b}
+    .remove-activity:hover{color:var(--red);background:#fff4f2;border-color:#f2bdb7}
+    .activity-actions{padding:13px 18px}
+    .cost-table{min-width:1140px}
+    .cost-table thead th:first-child,.cost-table tbody th,.cost-table tfoot th{position:sticky;left:0;z-index:1;box-shadow:1px 0 var(--line);padding-left:22px}
+    .cost-table thead th:first-child{width:270px}
+    .cost-table thead th.nights-col,.cost-table thead th.hours-col{width:144px}
+    .cost-table tbody th{overflow-wrap:anywhere}
+    .cost-table thead th:last-child{width:146px;color:var(--ink)}
+    .cost-table td{font-size:.9375rem;white-space:nowrap}
+    .cost-table td:last-child{background:#f6f8fc;font-weight:650}
+    .cost-table tbody tr.phase-subtotal th,.cost-table tbody tr.phase-subtotal td{font-weight:700;background:#edf2fc;border-top:1px solid #d6e0f0}
+    .cost-table .activity-name-cell{padding-left:36px;font-size:.875rem}
+    .phase-index{display:inline-block;margin-right:8px;font-size:.75rem;color:var(--muted);font-weight:500}
+    .cost-table tfoot th,.cost-table tfoot td{border-bottom:0;border-top:1px solid #becbe0;background:#edf2fd;font-weight:750;color:var(--navy)}
+    .cost-table tfoot td:last-child{background:#e2eaff;color:#143ba6}
+    .scroll-hint{display:none;font-size:.8125rem;color:var(--muted);padding:10px 18px;border-bottom:1px solid var(--line)}
+    .empty-state{padding:24px 18px;color:var(--muted);font-size:.9375rem}
+    .empty-cost{text-align:left!important;color:var(--muted);padding:20px 22px!important;font-weight:400!important;background:white!important}
+    .footnote{padding:13px 22px;font-size:.8125rem;color:var(--muted);border-top:1px solid var(--line);margin:0;line-height:1.55}
+    .issues{background:#fff4f2;color:#8a241b;border:1px solid #f5c3be;border-radius:10px;padding:14px 20px;margin:18px 0;font-size:.875rem}
+    .issues ul{margin:6px 0 0;padding-left:20px}
+    .warning-note{color:var(--amber);background:#fff9ed;border-top:1px solid #f3dfb9}
+    #save-dialog{border:1px solid var(--line);border-radius:12px;padding:24px;max-width:520px;width:calc(100% - 32px);color:var(--ink);background:white;box-shadow:0 18px 70px #10213a40}
+    #save-dialog::backdrop{background:#17264266}
+    #save-dialog p{font-size:.875rem;color:var(--muted);line-height:1.55}
+    .save-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+    #save-name-error{color:var(--red)!important}
+    @media print{#save-dialog{display:none!important}}
+    #toast{position:fixed;bottom:25px;left:50%;transform:translateX(-50%);padding:14px 22px;background:var(--navy);box-shadow:0 8px 25px #10213a30;color:white;border-radius:10px;max-width:calc(100vw - 30px);font-size:.875rem;z-index:20}
+    #toast:empty{display:none}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .no-script{padding:25px;background:#fff1ed;color:#871c12}
+    @media(max-width:1250px){.header-inner{flex-wrap:wrap;gap:15px}.identity{flex-basis:100%}.actions{margin-left:auto}.rate-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.scroll-hint{display:block}}
+    @media(max-width:900px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.primary-metric{grid-column:1/-1}.phase-header{flex-wrap:wrap}.phase-name-input{max-width:none;flex-basis:calc(100% - 50px)}.phase-total{margin-left:28px;text-align:left;flex:1}.section-head{flex-wrap:wrap}}
+    @media(max-width:680px){.header-inner{padding:18px 20px}.identity{align-items:flex-start;gap:11px}h1{font-size:1.25rem;gap:4px 7px}.brand-mark{width:38px;height:38px;margin-top:3px}.actions{width:100%}.actions .primary{flex:1}main{padding:16px 20px 28px}.project-line{justify-content:flex-start}.save-info{text-align:left}.metric{padding:15px}.metric-number{font-size:1.5rem}.metric-note{font-size:.75rem}.summary{gap:10px}.section-head{padding:16px 18px}.section-head>button{width:100%}.head-note{font-size:.75rem}.rate-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;padding:18px}.phases-list{padding:12px}.phase-header{padding:13px;gap:10px}.phase-total{margin-left:0}.activity-name-col{width:180px}.activity-table thead th:first-child,.activity-table tbody th{padding-left:12px}.cost-table thead th:first-child{width:180px}.cost-table thead th:first-child,.cost-table tbody th,.cost-table tfoot th{padding-left:15px}.cost-table .activity-name-cell{padding-left:25px}}
+    @media(max-width:380px){.summary{grid-template-columns:1fr}.primary-metric{grid-column:auto}main{padding:16px}.header-inner{padding:16px}.rate-grid{grid-template-columns:1fr}.phase-total{flex-basis:100%}.quiet-danger{width:100%}.title-separator{display:none}}
+    @media print{
+      @page{size:A4 landscape;margin:10mm}
+      body{background:white;font-size:10pt}.app-header{border:0}.header-inner{padding:0 0 12px;display:block}.brand-mark,.actions,.project-line,.edit-project,#project-title-input,.activity-actions,.quiet-danger,.remove-activity,.scroll-hint,#toast{display:none!important}
+      .panel{margin-top:12px;border-radius:0;overflow:visible}.section-head{padding:10px 12px}.section-head button{display:none}.section-number{background:none}.rate-grid{grid-template-columns:repeat(6,1fr);padding:12px;gap:10px}.field-label{font-size:8pt}.field-hint{font-size:7pt}.input-unit input,input{min-height:25px;border-color:transparent;background:transparent!important;padding:2px 5px;font-size:9pt}.phases-list{padding:10px}.phase-block{border-radius:0;overflow:visible;break-inside:auto}.phase-block+.phase-block{margin-top:14px}.phase-header{padding:8px 10px;flex-wrap:nowrap;break-after:avoid}.phase-name-input{font-size:11pt;flex:1;max-width:none;flex-basis:auto}.phase-total{margin-left:auto;flex:0 0 auto;text-align:right}.phase-total strong{font-size:10pt}.table-scroll{overflow:visible}
+      table{font-size:9pt}.activity-table,.cost-table{min-width:0}.activity-table th,.activity-table td,th,td{padding:5px!important}.activity-table input{font-size:9pt;min-height:24px;padding:2px 4px}.activity-table .activity-total{font-size:9pt}.activity-name-col{width:190px}.cars-col{width:105px}.activity-cost-col{width:120px}.remove-col{width:0}.activity-table th:last-child,.activity-table td:last-child{display:none}.activity-table thead th:first-child,.activity-table tbody th,.cost-table thead th:first-child,.cost-table tbody th,.cost-table tfoot th{position:static;box-shadow:none}.cost-table thead th:first-child{width:230px}.cost-table thead th:last-child{width:110px}.cost-table thead th.nights-col,.cost-table thead th.hours-col{width:105px}.cost-table .activity-name-cell{padding-left:18px!important}.cost-table td{font-size:9pt}thead th{height:35px;font-size:8pt}.head-note{font-size:8pt}.footnote{font-size:8pt;padding:8px 12px}.issues{font-size:9pt}h2{font-size:10pt}tr{break-inside:avoid}thead{display:table-header-group}
+    }
+
+  
+    .header-inner{flex-wrap:nowrap;padding:18px 36px;gap:24px}
+    .header-title{flex:1;min-width:0;display:flex;align-items:center;margin:0}
+    .header-inner .actions{width:auto;flex-shrink:0;margin-left:auto}
+    #project-title{display:inline-block;min-width:0;max-width:100%;padding:5px 8px;margin-left:-8px;border:1px solid transparent;border-radius:7px;overflow-wrap:anywhere;cursor:text;transition:background-color .12s ease}
+    #project-title:hover,#project-title:focus-visible{background:#eef0f4}
+    #project-title-input{font-size:inherit;font-weight:inherit;line-height:inherit;letter-spacing:inherit;width:17ch;max-width:100%;min-width:80px;min-height:0;padding:5px 8px;margin-left:-8px;color:var(--ink);background:#eef0f4;border-color:transparent;border-radius:7px}
+    #project-title-input:focus{border-color:#aeb8ca;outline:2px solid #9db7fb;outline-offset:1px}
+    .exchange-control{display:flex;align-items:center;gap:12px;flex-shrink:0;font-size:.8125rem}
+    .exchange-input{display:flex;align-items:center;gap:7px;white-space:nowrap;color:var(--muted)}
+    .exchange-input input{width:92px;text-align:right;font-size:1rem}
+    @media(max-width:1250px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.primary-metric{grid-column:1/-1}}
+    @media(max-width:900px){.header-inner{flex-wrap:wrap;gap:14px}.header-title{flex-basis:100%}.exchange-control{margin-right:auto}}
+    @media(max-width:680px){.header-inner{padding:16px 20px}}
+    @media(max-width:680px){.summary{grid-template-columns:1fr}.metric-number.metric-eur{font-size:1.25rem}}
+    @media(max-width:520px){.header-inner{flex-wrap:wrap;gap:12px}.header-title{flex-basis:100%}.header-inner .actions{width:100%}.header-inner .primary{width:100%}}
+    @media(max-width:520px){.exchange-control{width:100%;justify-content:space-between}}
+    @media print{.header-inner{padding:0 0 12px;display:block}#project-title{padding:0;margin:0;border:0;background:transparent!important;cursor:default}.exchange-control{margin-top:8px}.exchange-input input{font-size:9pt}.summary{grid-template-columns:1.45fr 1fr 1fr}.primary-metric{grid-column:auto}.metric-number,.metric-number.metric-eur{font-size:14pt}.metric-values{gap:6px 10px}}
+</style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <h1 class="header-title"><span id="project-title" role="button" tabindex="0" aria-label="Projektname bearbeiten" aria-controls="project-title-input" aria-expanded="false">Projektname</span><input id="project-title-input" type="text" aria-label="Projektname" placeholder="Projektname" autocomplete="off" maxlength="160" hidden=""></h1>
+      <div class="exchange-control"><div class="exchange-input"><span>1 EUR =</span><input type="text" id="eur-chf-rate" inputmode="decimal" autocomplete="off" placeholder="Kurs" aria-label="EUR/CHF: CHF je 1 EUR" aria-describedby="exchange-hint"><span>CHF</span></div><span class="sr-only" id="exchange-hint">Manuellen Wechselkurs eingeben. EUR-Beträge werden als CHF-Betrag geteilt durch diesen Kurs berechnet.</span></div>
+      <div class="actions"><button type="button" class="primary" id="save-button"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"></path></svg>Speichern</button></div>
+    </div>
+  </header>
+  <noscript><div class="no-script">Bitte JavaScript im Browser aktivieren, um Werte zu bearbeiten, Kosten zu berechnen und diese Anwendung zu speichern.</div></noscript>
+  <main>
+    <section class="summary" aria-label="Zusammenfassung">
+      <div class="metric primary-metric"><div class="metric-label">Kosten total</div><div class="metric-values"><div class="metric-number"><span id="total-cost">—</span><span class="unit">CHF</span></div><div class="metric-number metric-eur"><span id="total-cost-eur">—</span><span class="unit">EUR</span></div></div><div class="metric-note" id="project-count">—</div></div>
+      <div class="metric"><div class="metric-label">Fahrtzeitkosten</div><div class="metric-values"><div class="metric-number"><span id="travel-cost">—</span><span class="unit">CHF</span></div><div class="metric-number metric-eur"><span id="travel-cost-eur">—</span><span class="unit">EUR</span></div></div><div class="metric-note"><span id="travel-hours">—</span> h · Über alle Projektphasen</div></div>
+      <div class="metric"><div class="metric-label">Spesen</div><div class="metric-values"><div class="metric-number"><span id="expenses-cost">—</span><span class="unit">CHF</span></div><div class="metric-number metric-eur"><span id="expenses-cost-eur">—</span><span class="unit">EUR</span></div></div><div class="metric-note">Fahrtkosten, Verpflegung, Hotel</div></div>
+    </section>
+    <div id="validation" class="issues" role="status" hidden=""></div>
+    <section class="panel" aria-labelledby="rates-heading">
+      <div class="section-head"><h2 id="rates-heading"><span class="section-number">01</span>Reise- und Kostensätze</h2><span class="head-note">Für alle Projektphasen</span></div>
+      <div class="rate-grid">
+        <label class="field"><span class="field-label">Fahrtzeit einfach</span><span class="input-unit"><input type="text" id="rate-oneWayHours" inputmode="decimal" data-rate="oneWayHours" autocomplete="off" aria-describedby="hint-oneWayHours"><span class="suffix">h</span></span><span class="field-hint" id="hint-oneWayHours">3 h hin und zurück</span></label>
+        <label class="field"><span class="field-label">Strecke einfach</span><span class="input-unit"><input type="text" id="rate-oneWayKm" inputmode="decimal" data-rate="oneWayKm" autocomplete="off" aria-describedby="hint-oneWayKm"><span class="suffix">km</span></span><span class="field-hint" id="hint-oneWayKm">—</span></label>
+        <label class="field"><span class="field-label">Reisestundensatz</span><span class="input-unit"><input type="text" id="rate-hourlyRate" inputmode="decimal" data-rate="hourlyRate" autocomplete="off" aria-describedby="hint-hourlyRate"><span class="suffix">CHF</span></span><span class="field-hint" id="hint-hourlyRate">Je Person und Fahrtstunde</span></label>
+        <label class="field"><span class="field-label">Kilometersatz</span><span class="input-unit"><input type="text" id="rate-kmRate" inputmode="decimal" data-rate="kmRate" autocomplete="off" aria-describedby="hint-kmRate"><span class="suffix">CHF</span></span><span class="field-hint" id="hint-kmRate">Je Auto und Kilometer</span></label>
+        <label class="field"><span class="field-label">Verpflegung</span><span class="input-unit"><input type="text" id="rate-mealRate" inputmode="decimal" data-rate="mealRate" autocomplete="off" aria-describedby="hint-mealRate"><span class="suffix">CHF</span></span><span class="field-hint" id="hint-mealRate">Je Person und Tag</span></label>
+        <label class="field"><span class="field-label">Hotel</span><span class="input-unit"><input type="text" id="rate-hotelRate" inputmode="decimal" data-rate="hotelRate" autocomplete="off" aria-describedby="hint-hotelRate"><span class="suffix">CHF</span></span><span class="field-hint" id="hint-hotelRate">Je Person und Nacht</span></label>
+      </div>
+    </section>
+    <section class="panel" aria-labelledby="phases-heading">
+      <div class="section-head"><h2 id="phases-heading"><span class="section-number">02</span>Projektphasen &amp; Aktivitäten</h2><button type="button" id="add-phase" title="Aktivitäten und Eingaben der letzten Phase übernehmen">+ Projektphase hinzufügen</button></div>
+      <div class="phases-list" id="phases-list"></div>
+    </section>
+    <section class="panel" aria-labelledby="costs-heading">
+      <div class="section-head"><h2 id="costs-heading"><span class="section-number">03</span>Kostenübersicht</h2><span class="head-note">Alle Projektphasen · Kosten in CHF</span></div>
+      <div class="scroll-hint">Die Tabelle lässt sich seitlich verschieben.</div>
+      <div class="table-scroll" role="region" aria-label="Kosten aller Projektphasen und Aktivitäten" tabindex="0">
+        <table class="cost-table"><caption class="sr-only">Fahrtzeitkosten und Fahrtstunden, Fahrtkosten, Verpflegung und Hotelkosten in CHF sowie die Anzahl Übernachtungen aller Mitarbeiter je Projektphase und Aktivität</caption><thead><tr><th scope="col">Projektphase / Aktivität</th><th scope="col">Fahrtzeitkosten</th><th scope="col" class="hours-col" aria-describedby="hours-hint">Fahrtstunden</th><th scope="col">Fahrtkosten</th><th scope="col">Verpflegung</th><th scope="col">Hotel</th><th scope="col" class="nights-col" aria-describedby="nights-hint">Übernachtungen</th><th scope="col">Total</th></tr></thead><tbody id="cost-body"></tbody><tfoot id="cost-foot"></tfoot></table>
+      </div>
+      <p class="footnote" id="hours-hint">Fahrtstunden: Summe der Fahrtzeit aller Mitarbeiter (hin und zurück).</p>
+      <p class="footnote" id="nights-hint">Übernachtungen: Summe der Nächte aller Mitarbeiter. Bei 0 Hotelzyklen fallen keine Übernachtungen an.</p>
+      <p class="footnote warning-note" id="hotel-warning" hidden=""></p>
+    </section>
+  </main>
+  <dialog id="save-dialog" aria-labelledby="save-dialog-title" aria-describedby="save-dialog-description">
+    <h2 id="save-dialog-title">HTML-Datei speichern</h2>
+    <p id="save-dialog-description">Dieser Browser bietet hier keine direkte Ordnerauswahl. Aktiviere in seinen Download-Einstellungen die Abfrage des Speicherorts, damit du beim Herunterladen einen Ordner auswählen kannst. Alternativ öffne die HTML-Datei direkt in Chrome oder Edge.</p>
+    <label class="field" for="save-filename"><span class="field-label">Dateiname</span><input type="text" id="save-filename" autocomplete="off" maxlength="180" aria-describedby="save-name-hint"><span class="field-hint" id="save-name-hint">Die Endung .html wird bei Bedarf ergänzt.</span></label>
+    <p id="save-name-error" role="alert" hidden=""></p>
+    <div class="save-dialog-actions"><button type="button" id="cancel-save">Abbrechen</button><button type="button" class="primary" id="confirm-download">Herunterladen</button></div>
+  </dialog>
+  <span id="save-status" class="sr-only" role="status"></span>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="application/json" id="app-data">
+{"version":5,"project":"","exportedAt":"2026-09-29T09:41:31.570Z","rates":{"oneWayHours":"1.5","oneWayKm":"115","hourlyRate":"150","kmRate":"1.4","mealRate":"70","hotelRate":"150"},"phases":[{"id":"phase-1","name":"Ausbaustufe 1","activities":[{"id":"analyse","name":"Analyse","employees":"4","days":"2","cycles":"1","trips":"1","cars":"2"},{"id":"schulung","name":"Schulung","employees":"1","days":"5","cycles":"1","trips":"1","cars":"1"},{"id":"komponententest","name":"Komponententest","employees":"3","days":"40","cycles":"8","trips":"8","cars":"1.5"},{"id":"integrationstest","name":"Integrationstest","employees":"4","days":"20","cycles":"4","trips":"4","cars":"2"},{"id":"uat","name":"UAT","employees":"4","days":"2","cycles":"1","trips":"1","cars":"2"},{"id":"produktion","name":"Produktionsbegleitung","employees":"2","days":"10","cycles":"2","trips":"2","cars":"1"}]}],"eurChfRate":"0.93"}
+  </script>
+  <script id="app-code">
+(() => {
+  'use strict';
+  const documentTemplate = '<!doctype html>\n' + document.documentElement.outerHTML;
+  const state = JSON.parse(document.getElementById('app-data').textContent);
+  state.eurChfRate??='';
+  const byId = id => document.getElementById(id);
+  const rateLabels = {oneWayHours:'Fahrtzeit einfach',oneWayKm:'Strecke einfach',hourlyRate:'Reisestundensatz',kmRate:'Kilometersatz',mealRate:'Verpflegungssatz',hotelRate:'Hotelsatz'};
+  const fields = [
+    {key:'employees',label:'Mitarbeiter'}, {key:'days',label:'Tage'},
+    {key:'cycles',label:'Hotelzyklen'}, {key:'trips',label:'Fahrten'},
+    {key:'cars',label:'Autos'}
+  ];
+  const costKeys = ['travel','driving','meals','hotel'];
+  const moneyFormatter = new Intl.NumberFormat('de-CH',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const numberFormatter = new Intl.NumberFormat('de-CH',{maximumFractionDigits:4});
+  let dirty=false;
+  let stateRevision=0;
+  let saving=false;
+  let toastTimer;
+  let lastResult;
+  let idCounter=0;
+  let editingProject=false;
+
+  function parseNumber(raw) {
+    const s=String(raw??'').trim().replace(/[\s'’]/g,'');
+    if(!/^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(s)) return null;
+    const n=Number(s.replace(',','.'));
+    return Number.isFinite(n)&&n>=0?n:null;
+  }
+  function safeResult(n) { return Number.isFinite(n)?n:null; }
+  function hotelCyclesExceedDays(days,cycles) { return days!==null&&cycles!==null&&cycles>days/2; }
+  function inEuro(chf,eurChfRate) { return chf===null||eurChfRate===null?null:safeResult(chf/eurChfRate); }
+  function product(...values) { return values.some(v=>v===null)?null:safeResult(values.reduce((a,b)=>a*b,1)); }
+  function sum(values) { return values.some(v=>v===null)?null:safeResult(values.reduce((a,b)=>a+b,0)); }
+  function amount(n) { return n===null?'—':moneyFormatter.format(Object.is(n,-0)?0:n); }
+  function number(n) { return n===null?'—':numberFormatter.format(Object.is(n,-0)?0:n); }
+  function escapeHTML(value) { return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+  function serializedData(data) { return JSON.stringify(data).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029'); }
+  function phaseName(phase) { return phase.name.trim()||'Unbenannte Projektphase'; }
+  function activityName(activity) { return activity.name.trim()||'Unbenannte Aktivität'; }
+  function makeId(prefix) {
+    const suffix=typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function'?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+'-'+(++idCounter);
+    return prefix+'-'+suffix;
+  }
+  function getPhase(data,id) {
+    const phase=data.phases.find(p=>p.id===id);
+    if(!phase) throw new Error('Projektphase nicht gefunden.');
+    return phase;
+  }
+  function phaseSource(data) {
+    return [...data.phases].reverse().find(phase=>phase.activities.length>0)||null;
+  }
+  function newActivity(name) {
+    return {id:makeId('activity'),name:String(name??'').trim()||'Neue Aktivität',employees:'0',days:'1',cycles:'1',trips:'0',cars:'1'};
+  }
+  function appendPhase(data,name) {
+    const source=phaseSource(data);
+    const activities=source?source.activities.map(activity=>({id:makeId('activity'),name:activity.name,...Object.fromEntries(fields.map(f=>[f.key,activity[f.key]]))})):
+      ['Analyse','Schulung','Komponententest','Integrationstest','UAT','Produktionsbegleitung'].map(newActivity);
+    const phase={id:makeId('phase'),name:String(name??'').trim()||'Projektphase '+(data.phases.length+1),activities};
+    data.phases.push(phase);
+    return phase;
+  }
+  function appendActivity(data,phaseId,name) {
+    const phase=getPhase(data,phaseId),activity=newActivity(name);
+    phase.activities.push(activity);
+    return activity;
+  }
+  function removePhase(data,phaseId) {
+    const index=data.phases.findIndex(p=>p.id===phaseId);
+    if(index<0) throw new Error('Projektphase nicht gefunden.');
+    data.phases.splice(index,1);
+  }
+  function removeActivity(data,phaseId,activityId) {
+    const phase=getPhase(data,phaseId);
+    const index=phase.activities.findIndex(a=>a.id===activityId);
+    if(index<0) throw new Error('Aktivität nicht gefunden.');
+    phase.activities.splice(index,1);
+  }
+  function calculate(data) {
+    const rates=Object.fromEntries(Object.entries(data.rates).map(([k,v])=>[k,parseNumber(v)]));
+    const phases=data.phases.map(phase=>{
+      const activities=phase.activities.map(activity=>{
+        const inputs=Object.fromEntries(fields.map(f=>[f.key,parseNumber(activity[f.key])]));
+        const {employees,days,cycles,trips,cars}=inputs;
+        const invalidHotelCycles=hotelCyclesExceedDays(days,cycles);
+        const hotelNights=cycles===0?0:days===null||cycles===null||invalidHotelCycles?null:safeResult((days/cycles-1)*cycles);
+        const overnightStays=cycles===0?0:product(employees,hotelNights);
+        const travelHours=product(2,rates.oneWayHours,employees,trips);
+        const costs={
+          travel:product(2,rates.oneWayHours,employees,trips,rates.hourlyRate),
+          driving:product(2,rates.oneWayKm,rates.kmRate,trips,cars),
+          meals:product(employees,days,rates.mealRate),
+          hotel:cycles===0?0:product(rates.hotelRate,employees,hotelNights)
+        };
+        return {id:activity.id,inputs,costs,total:sum(Object.values(costs)),travelHours,hotelNights,overnightStays,invalidHotelCycles};
+      });
+      const totals=Object.fromEntries(costKeys.map(key=>[key,sum(activities.map(a=>a.costs[key]))]));
+      return {id:phase.id,activities,totals,total:sum(Object.values(totals)),travelHours:sum(activities.map(a=>a.travelHours)),overnightStays:sum(activities.map(a=>a.overnightStays))};
+    });
+    const totals=Object.fromEntries(costKeys.map(key=>[key,sum(phases.map(p=>p.totals[key]))]));
+    const total=sum(Object.values(totals)),expenses=sum([totals.driving,totals.meals,totals.hotel]);
+    const parsedExchangeRate=parseNumber(data.eurChfRate),eurChfRate=parsedExchangeRate!==null&&parsedExchangeRate>0?parsedExchangeRate:null;
+    const eur={total:inEuro(total,eurChfRate),travel:inEuro(totals.travel,eurChfRate),expenses:inEuro(expenses,eurChfRate)};
+    return {rates,phases,totals,total,expenses,travelHours:sum(phases.map(p=>p.travelHours)),overnightStays:sum(phases.map(p=>p.overnightStays)),eurChfRate,eur};
+  }
+  function buildDocument(data,template) {
+    const title=(data.project.trim()?data.project.trim()+' · ':'')+'Reisezeiten & Spesen';
+    return template
+      .replace(/(<script type="application\/json" id="app-data">)[\s\S]*?(<\/script>)/,(_match,start,end)=>start+'\n'+serializedData(data)+'\n  '+end)
+      .replace(/<title>[\s\S]*?<\/title>/,()=>'<title>'+escapeHTML(title)+'</title>')
+      .replace(/(<span id="project-title"[^>]*>)[\s\S]*?(<\/span>)/,(_match,start,end)=>start+escapeHTML(data.project.trim()||'Projektname')+end);
+  }
+  function filename(data) {
+    const project=String(data.project).trim().replace(/[^\p{L}\p{N}._-]+/gu,'-').replace(/^-+|-+$/g,'').slice(0,90);
+    return (project?project+'_':'')+'Reisezeiten-und-Spesen.html';
+  }
+
+  function setText(id,value) { byId(id).textContent=value; }
+  function editorMarkup(data) {
+    if(!data.phases.length)return '<div class="empty-state">Noch keine Projektphase. Über „Projektphase hinzufügen“ beginnen.</div>';
+    return data.phases.map((phase,index)=>`<section class="phase-block" id="phase-block-${phase.id}" aria-labelledby="phase-label-${phase.id}">
+      <div class="phase-header">
+        <h3 class="sr-only" id="phase-label-${phase.id}">${escapeHTML(phaseName(phase))}</h3>
+        <span class="phase-number" aria-hidden="true">${String(index+1).padStart(2,'0')}</span>
+        <input type="text" class="phase-name-input" id="phase-name-${phase.id}" data-phase-name="${escapeHTML(phase.id)}" value="${escapeHTML(phase.name)}" aria-label="Name der Projektphase ${index+1}" maxlength="160" autocomplete="off">
+        <div class="phase-total"><span>Total Phase</span><strong id="phase-total-${phase.id}">—</strong></div>
+        <button type="button" class="quiet-danger" data-remove-phase="${escapeHTML(phase.id)}" id="remove-phase-${phase.id}" aria-label="Projektphase ${escapeHTML(phaseName(phase))} entfernen">Phase entfernen</button>
+      </div>
+      ${phase.activities.length?`<div class="scroll-hint">Die Tabelle lässt sich seitlich verschieben.</div>
+      <div class="table-scroll" role="region" aria-label="Aktivitäten · ${escapeHTML(phaseName(phase))}" id="activity-region-${phase.id}" tabindex="0">
+        <table class="activity-table"><caption class="sr-only">Aktivitäten · ${escapeHTML(phaseName(phase))}</caption><colgroup><col class="activity-name-col"><col><col><col><col><col class="cars-col"><col class="activity-cost-col"><col class="remove-col"></colgroup>
+          <thead><tr><th scope="col">Aktivität</th><th scope="col">Mitarbeiter</th><th scope="col">Tage</th><th scope="col" title="0 = keine Übernachtungen. Pro Hotelzyklus sind mindestens 2 Tage erforderlich.">Hotelzyklen</th><th scope="col">Fahrten</th><th scope="col" title="Gesamtzahl der eingesetzten Autos je Aktivität">Autos</th><th scope="col">Kosten (CHF)</th><th scope="col"><span class="sr-only">Entfernen</span></th></tr></thead>
+          <tbody>${phase.activities.map(activity=>`<tr>
+            <th scope="row"><input type="text" id="activity-${activity.id}-name" data-phase="${escapeHTML(phase.id)}" data-activity="${escapeHTML(activity.id)}" data-field="name" value="${escapeHTML(activity.name)}" aria-label="Aktivitätsname · ${escapeHTML(phaseName(phase))} · ${escapeHTML(activityName(activity))}" autocomplete="off" maxlength="160"></th>
+            ${fields.map(f=>`<td><input type="text" id="activity-${activity.id}-${f.key}" inputmode="decimal" data-phase="${escapeHTML(phase.id)}" data-activity="${escapeHTML(activity.id)}" data-field="${f.key}" value="${escapeHTML(activity[f.key])}" aria-label="${f.label} · ${escapeHTML(phaseName(phase))} · ${escapeHTML(activityName(activity))}" autocomplete="off"></td>`).join('')}
+            <td class="activity-total" id="activity-total-${activity.id}">—</td>
+            <td><button type="button" id="remove-activity-${activity.id}" class="remove-activity" data-phase="${escapeHTML(phase.id)}" data-remove-activity="${escapeHTML(activity.id)}" aria-label="Aktivität ${escapeHTML(activityName(activity))} aus ${escapeHTML(phaseName(phase))} entfernen" title="Aktivität entfernen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg></button></td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>`:'<div class="empty-state">Noch keine Aktivitäten in dieser Projektphase.</div>'}
+      <div class="activity-actions"><button type="button" id="add-activity-${phase.id}" data-add-activity="${escapeHTML(phase.id)}">+ Aktivität hinzufügen</button></div>
+    </section>`).join('');
+  }
+  function renderEditor() { byId('phases-list').innerHTML=editorMarkup(state); }
+  function renderCosts(result) {
+    const cells=(totals,overnightStays,travelHours)=>costKeys.map(key=>`<td>${amount(totals[key])}</td>`+(key==='travel'?`<td class="hours-count">${number(travelHours)}</td>`:'')+(key==='hotel'?`<td class="overnight-count">${number(overnightStays)}</td>`:'')).join('');
+    byId('cost-body').innerHTML=state.phases.map((phase,i)=>{
+      const calculated=result.phases[i];
+      return `<tr class="phase-subtotal"><th scope="row"><span class="phase-index">${String(i+1).padStart(2,'0')}</span>${escapeHTML(phaseName(phase))}</th>${cells(calculated.totals,calculated.overnightStays,calculated.travelHours)}<td>${amount(calculated.total)}</td></tr>`+
+        phase.activities.map((activity,j)=>`<tr><th scope="row" class="activity-name-cell">${escapeHTML(activityName(activity))}</th>${cells(calculated.activities[j].costs,calculated.activities[j].overnightStays,calculated.activities[j].travelHours)}<td>${amount(calculated.activities[j].total)}</td></tr>`).join('');
+    }).join('')||'<tr><td class="empty-cost" colspan="8">Noch keine Projektphasen erfasst.</td></tr>';
+    byId('cost-foot').innerHTML=`<tr><th scope="row">Gesamttotal</th>${cells(result.totals,result.overnightStays,result.travelHours)}<td>${amount(result.total)}</td></tr>`;
+  }
+  function validate(result) {
+    const issues=[];
+    const warnings=[];
+    function mark(input,valid) {
+      if(!input)return;
+      input.setAttribute('aria-invalid',valid?'false':'true');
+      const base=(input.getAttribute('aria-describedby')||'').split(' ').filter(s=>s&&s!=='validation');
+      if(!valid)base.push('validation');
+      if(base.length)input.setAttribute('aria-describedby',base.join(' '));else input.removeAttribute('aria-describedby');
+    }
+    for(const key of Object.keys(rateLabels)) {
+      const valid=result.rates[key]!==null;
+      mark(byId('rate-'+key),valid);
+      if(!valid)issues.push(rateLabels[key]+': Bitte eine Zahl ab 0 eingeben.');
+    }
+    const exchangeValid=String(state.eurChfRate).trim()===''||result.eurChfRate!==null;
+    mark(byId('eur-chf-rate'),exchangeValid);
+    if(!exchangeValid)issues.push('EUR/CHF: Bitte einen Kurs grösser als 0 eingeben.');
+    if(result.eurChfRate!==null&&result.total!==null&&result.eur.total===null)issues.push('Der EUR-Betrag ist für die Berechnung zu gross. Bitte den EUR/CHF-Kurs prüfen.');
+    state.phases.forEach((phase,i)=>phase.activities.forEach((activity,j)=>{
+      const calculated=result.phases[i].activities[j];
+      for(const f of fields) {
+        const valid=calculated.inputs[f.key]!==null&&(f.key!=='cycles'||!calculated.invalidHotelCycles);
+        mark(byId('activity-'+activity.id+'-'+f.key),valid);
+        if(!valid)issues.push(phaseName(phase)+' / '+activityName(activity)+' – '+f.label+': '+(f.key==='cycles'&&calculated.invalidHotelCycles?'Für '+number(calculated.inputs.cycles)+' Hotelzyklen sind mindestens '+number(calculated.inputs.cycles*2)+' Tage erforderlich.':'Bitte eine Zahl ab 0 eingeben.'));
+      }
+      if(calculated.hotelNights!==null&&calculated.hotelNights<0)warnings.push(phaseName(phase)+' / '+activityName(activity));
+    }));
+    if(!issues.length&&result.total===null)issues.push('Mindestens ein Zahlenwert ist für die Berechnung zu gross. Bitte die Eingaben reduzieren.');
+    byId('validation').hidden=issues.length===0;
+    byId('validation').innerHTML=issues.length?`<strong>Eingaben prüfen</strong><ul>${issues.map(t=>`<li>${escapeHTML(t)}</li>`).join('')}</ul>`:'';
+    byId('hotel-warning').hidden=warnings.length===0;
+    setText('hotel-warning',warnings.length?'Mehr Hotelzyklen als Tage: '+warnings.join(', ')+'. Dies ergibt negative Hotelkosten. Bitte die Eingaben prüfen.':'');
+  }
+  function update() {
+    const result=calculate(state);lastResult=result;
+    setText('total-cost',amount(result.total));setText('travel-hours',number(result.travelHours));setText('travel-cost',amount(result.totals.travel));setText('expenses-cost',amount(result.expenses));
+    setText('total-cost-eur',amount(result.eur.total));setText('travel-cost-eur',amount(result.eur.travel));setText('expenses-cost-eur',amount(result.eur.expenses));
+    const phaseCount=state.phases.length,activityCount=state.phases.reduce((total,p)=>total+p.activities.length,0);
+    setText('project-count',phaseCount+' '+(phaseCount===1?'Projektphase':'Projektphasen')+' · '+activityCount+' '+(activityCount===1?'Aktivität':'Aktivitäten'));
+    setText('hint-oneWayKm',number(product(2,result.rates.oneWayKm))+' km hin und zurück');
+    setText('hint-oneWayHours',number(product(2,result.rates.oneWayHours))+' h hin und zurück');
+    result.phases.forEach((phase,index)=>{
+      setText('phase-total-'+phase.id,amount(phase.total)+' CHF');
+      setText('phase-label-'+phase.id,phaseName(state.phases[index]));
+      phase.activities.forEach(activity=>setText('activity-total-'+activity.id,amount(activity.total)));
+    });
+    renderCosts(result);validate(result);refreshProjectTitle();
+  }
+  function refreshProjectTitle() {
+    const project=state.project.trim();
+    setText('project-title',project||'Projektname');
+    document.title=(project?project+' · ':'')+'Reisezeiten & Spesen';
+  }
+  function startProjectEdit() {
+    if(editingProject){byId('project-title-input').focus();return;}
+    editingProject=true;
+    const input=byId('project-title-input');input.value=state.project;
+    input.style.width=Math.min(28,Math.max(12,state.project.length+1))+'ch';
+    byId('project-title').hidden=true;input.hidden=false;
+    byId('project-title').setAttribute('aria-expanded','true');
+    input.focus();input.select();
+  }
+  function finishProjectEdit(commit) {
+    if(!editingProject)return;
+    const value=byId('project-title-input').value.trim();
+    editingProject=false;
+    byId('project-title-input').hidden=true;byId('project-title').hidden=false;
+    byId('project-title').setAttribute('aria-expanded','false');
+    if(commit&&value!==state.project){state.project=value;dirty=true;stateRevision++;showSaveStatus();}
+    refreshProjectTitle();
+  }
+  function showSaveStatus() {
+    const element=byId('save-status');element.classList.toggle('changed',dirty);
+    if(dirty)element.textContent='Änderungen noch nicht gespeichert';
+    else if(state.exportedAt){const stamp=new Date(state.exportedAt);element.textContent=Number.isNaN(stamp.getTime())?'Stand aus HTML-Datei':'Dateistand: '+new Intl.DateTimeFormat('de-CH',{dateStyle:'short',timeStyle:'short'}).format(stamp);}
+    else element.textContent='Werte aus Excel übernommen';
+  }
+  function changed() {dirty=true;stateRevision++;update();showSaveStatus();}
+  function toast(text) {clearTimeout(toastTimer);setText('toast',text);toastTimer=setTimeout(()=>setText('toast',''),5000);}
+  function addPhase(name) {
+    const source=phaseSource(state);
+    const phase=appendPhase(state,name);renderEditor();changed();
+    toast(phase.activities.length+' Aktivitäten '+(source?'inklusive Eingaben aus „'+phaseName(source)+'“ übernommen.':'angelegt.'));
+    return phase;
+  }
+  function addActivity(phaseId,name) {
+    const activity=appendActivity(state,phaseId,name);renderEditor();changed();return activity;
+  }
+  function removeEntry(phaseId,activityId=null) {
+    const phase=state.phases.find(p=>p.id===phaseId);if(!phase)return;
+    const activity=activityId?phase.activities.find(a=>a.id===activityId):null;
+    if(activityId&&!activity)return;
+    if(activityId)removeActivity(state,phaseId,activityId);else removePhase(state,phaseId);
+    renderEditor();changed();
+    (activityId?byId('add-activity-'+phaseId):byId('add-phase')).focus();
+  }
+  function saveSnapshot() {
+    finishProjectEdit(true);
+    const snapshot=JSON.parse(JSON.stringify(state));snapshot.exportedAt=new Date().toISOString();
+    return {snapshot,revision:stateRevision,html:buildDocument(snapshot,documentTemplate)};
+  }
+  function downloadFilename(raw) {
+    const name=String(raw??'').trim();
+    if(!name||/[\\/:*?"<>|\u0000-\u001f]/.test(name)||/[. ]$/.test(name))return null;
+    return /\.html?$/i.test(name)?name:name+'.html';
+  }
+  function downloadHTML(name) {
+    let url;
+    try {
+      const {html}=saveSnapshot();
+      url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
+      const link=document.createElement('a');link.href=url;link.download=name;link.hidden=true;
+      document.body.appendChild(link);link.click();link.remove();
+      setText('save-status','Download bereitgestellt. Speichern bitte im Browser abschliessen.');
+      toast('Download bereitgestellt. Speichern bitte im Browser abschliessen.');
+      return true;
+    } catch(error) {
+      toast('Der Download konnte nicht erstellt werden. Bitte erneut versuchen.');return false;
+    } finally {if(url)setTimeout(()=>URL.revokeObjectURL(url),60000);}
+  }
+  function openSaveFallback() {
+    const dialog=byId('save-dialog');
+    if(dialog.open)return;
+    const input=byId('save-filename');input.value=filename(state);input.setAttribute('aria-invalid','false');
+    input.setAttribute('aria-describedby','save-name-hint');byId('save-name-error').hidden=true;
+    if(typeof dialog.showModal==='function') {dialog.showModal();input.focus();input.select();}
+    else {
+      const raw=window.prompt('Dateiname eingeben. Für die Ordnerauswahl muss in den Download-Einstellungen die Abfrage des Speicherorts aktiviert sein.',input.value);
+      if(raw===null)return;
+      const name=downloadFilename(raw);
+      if(name)downloadHTML(name);else toast('Bitte einen gültigen Dateinamen ohne Pfadangabe eingeben.');
+    }
+  }
+  function confirmDownload() {
+    const input=byId('save-filename'),name=downloadFilename(input.value);
+    if(!name) {
+      input.setAttribute('aria-invalid','true');input.setAttribute('aria-describedby','save-name-hint save-name-error');
+      setText('save-name-error','Bitte einen gültigen Dateinamen ohne Pfadangabe eingeben.');byId('save-name-error').hidden=false;input.focus();return;
+    }
+    if(downloadHTML(name))byId('save-dialog').close();
+  }
+  async function saveHTML() {
+    if(saving||byId('save-dialog').open)return;
+    finishProjectEdit(true);
+    if(typeof window.showSaveFilePicker!=='function'){openSaveFallback();return;}
+    const button=byId('save-button');saving=true;button.disabled=true;button.setAttribute('aria-busy','true');
+    let writable;
+    try {
+      let handle;
+      try {
+        handle=await window.showSaveFilePicker({
+          id:'reisezeiten-spesen',suggestedName:filename(state),
+          types:[{description:'HTML-Datei',accept:{'text/html':['.html']}}],excludeAcceptAllOption:true
+        });
+      } catch(error) {
+        if(error.name==='AbortError'){setText('save-status','Speichern abgebrochen.');return;}
+        if(error.name==='SecurityError'||error.name==='NotSupportedError'){openSaveFallback();return;}
+        throw error;
+      }
+      const {snapshot,revision,html}=saveSnapshot();
+      writable=await handle.createWritable();
+      await writable.write(new Blob([html],{type:'text/html;charset=utf-8'}));
+      await writable.close();writable=null;
+      state.exportedAt=snapshot.exportedAt;dirty=stateRevision!==revision;showSaveStatus();
+      if(dirty)toast('Datei gespeichert. Neuere Änderungen sind noch nicht gespeichert.');
+      else {
+        setText('save-status','Gespeichert · '+new Intl.DateTimeFormat('de-CH',{timeStyle:'short'}).format(new Date()));
+        toast('„'+handle.name+'“ gespeichert.');
+      }
+    } catch(error) {
+      if(writable&&typeof writable.abort==='function'){try{await writable.abort();}catch(abortError){}}
+      setText('save-status','Speichern fehlgeschlagen.');toast('Die Datei konnte nicht gespeichert werden. Bitte erneut versuchen.');
+    } finally {saving=false;button.disabled=false;button.removeAttribute('aria-busy');}
+  }
+  function refreshPhaseLabels(phase) {
+    byId('remove-phase-'+phase.id).setAttribute('aria-label','Projektphase '+phaseName(phase)+' entfernen');
+    const region=byId('activity-region-'+phase.id);
+    if(region)region.setAttribute('aria-label','Aktivitäten · '+phaseName(phase));
+    for(const activity of phase.activities){
+      const suffix=' · '+phaseName(phase)+' · '+activityName(activity);
+      byId('activity-'+activity.id+'-name').setAttribute('aria-label','Aktivitätsname'+suffix);
+      fields.forEach(f=>byId('activity-'+activity.id+'-'+f.key).setAttribute('aria-label',f.label+suffix));
+      byId('remove-activity-'+activity.id).setAttribute('aria-label','Aktivität '+activityName(activity)+' aus '+phaseName(phase)+' entfernen');
+    }
+  }
+
+  for(const key of Object.keys(rateLabels))byId('rate-'+key).value=state.rates[key];
+  byId('eur-chf-rate').value=state.eurChfRate;
+  renderEditor();update();showSaveStatus();
+  document.addEventListener('input',event=>{
+    const target=event.target;if(!(target instanceof HTMLInputElement))return;
+    if(target.id==='eur-chf-rate')state.eurChfRate=target.value;
+    else if(target.dataset.rate)state.rates[target.dataset.rate]=target.value;
+    else if(target.dataset.phaseName){const phase=getPhase(state,target.dataset.phaseName);phase.name=target.value;refreshPhaseLabels(phase);}
+    else if(target.dataset.activity){
+      const phase=getPhase(state,target.dataset.phase);
+      const activity=phase.activities.find(a=>a.id===target.dataset.activity);if(!activity)return;
+      activity[target.dataset.field]=target.value;
+      if(target.dataset.field==='name')refreshPhaseLabels(phase);
+    } else return;
+    changed();
+  });
+  byId('project-title').addEventListener('click',startProjectEdit);
+  byId('project-title').addEventListener('keydown',event=>{
+    if(event.key==='Enter'||event.key===' '){event.preventDefault();startProjectEdit();}
+  });
+  byId('project-title-input').addEventListener('blur',()=>finishProjectEdit(true));
+  byId('project-title-input').addEventListener('keydown',event=>{
+    if(event.key==='Enter'||event.key==='Escape'){event.preventDefault();event.stopPropagation();finishProjectEdit(event.key==='Enter');byId('project-title').focus();}
+  });
+  byId('add-phase').addEventListener('click',()=>{
+    const phase=addPhase(),input=byId('phase-name-'+phase.id);input.focus();input.select();
+  });
+  byId('phases-list').addEventListener('click',event=>{
+    const button=event.target.closest('button');if(!button)return;
+    if(button.dataset.addActivity){const activity=addActivity(button.dataset.addActivity),input=byId('activity-'+activity.id+'-name');input.focus();input.select();}
+    else if(button.dataset.removeActivity)removeEntry(button.dataset.phase,button.dataset.removeActivity);
+    else if(button.dataset.removePhase)removeEntry(button.dataset.removePhase);
+  });
+  byId('save-button').addEventListener('click',saveHTML);
+  byId('cancel-save').addEventListener('click',()=>byId('save-dialog').close());
+  byId('confirm-download').addEventListener('click',confirmDownload);
+  byId('save-filename').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();confirmDownload();}});
+  byId('save-dialog').addEventListener('close',()=>byId('save-button').focus());
+  window.addEventListener('beforeprint',()=>finishProjectEdit(true));
+  document.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'){event.preventDefault();saveHTML();}});
+  window.addEventListener('beforeunload',event=>{
+    if(dirty||(editingProject&&byId('project-title-input').value.trim()!==state.project)){event.preventDefault();event.returnValue='';}
+  });
+
+  const context=document.modelContext;
+  if(context&&typeof context.registerTool==='function') {
+    const lifecycle=new AbortController();
+    const register=tool=>{try{Promise.resolve(context.registerTool(tool,{signal:lifecycle.signal})).catch(()=>{});}catch(error){}};
+    const checkObject=(input,allowed)=>{if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.includes(key)))throw new Error('Ungültige Eingaben.');};
+    const checkName=name=>{if(typeof name!=='string'||!name.trim()||name.length>160)throw new Error('Bitte einen Namen mit 1 bis 160 Zeichen eingeben.');return name.trim();};
+    register({name:'read_travel_calculation',title:'Reisekalkulation lesen',description:'Liest alle Projektphasen, Aktivitäten, Eingaben, berechneten Kosten in CHF und EUR, Fahrtstunden (Summe aller Mitarbeiter, hin und zurück) und Übernachtungen (Summe der Nächte aller Mitarbeiter). null kennzeichnet ungültige Ergebnisse.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute:()=>({inputs:JSON.parse(JSON.stringify(state)),results:JSON.parse(JSON.stringify(lastResult))})});
+    register({name:'add_project_phase',title:'Projektphase hinzufügen',description:'Legt eine neue Projektphase an. Aktivitäten und Eingaben werden aus der letzten Phase mit Aktivitäten kopiert; ohne vorhandene Aktivitäten werden die sechs Standardaktivitäten angelegt. Alle Phasen bleiben sichtbar. Änderungen sind noch nicht als HTML exportiert.',inputSchema:{type:'object',properties:{name:{type:'string',minLength:1,maxLength:160}},required:['name'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute:input=>{checkObject(input,['name']);const phase=addPhase(checkName(input.name));return {phaseId:phase.id,name:phase.name,exportRequired:true};}});
+    register({name:'add_project_activity',title:'Projektaktivität hinzufügen',description:'Fügt einer vorhandenen Projektphase eine benannte Aktivität mit anfangs 0 Mitarbeitern und 0 Fahrten hinzu. Alle Projektphasen bleiben sichtbar.',inputSchema:{type:'object',properties:{phaseId:{type:'string'},name:{type:'string',minLength:1,maxLength:160}},required:['phaseId','name'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute:input=>{checkObject(input,['phaseId','name']);const name=checkName(input.name);getPhase(state,input.phaseId);const activity=addActivity(input.phaseId,name);return {phaseId:input.phaseId,activityId:activity.id,exportRequired:true};}});
+    register({name:'update_travel_inputs',title:'Reiseeingaben ändern',description:'Aktualisiert den EUR/CHF-Kurs, gemeinsame Kostensätze oder Werte bestehender Aktivitäten in einem Schritt. Alle Änderungen werden geprüft, dann zusammen übernommen.',inputSchema:{type:'object',properties:{eurChfRate:{type:'number',exclusiveMinimum:0,description:'CHF je 1 EUR'},rates:{type:'object',properties:Object.fromEntries(Object.keys(rateLabels).map(k=>[k,{type:'number',minimum:0}])),additionalProperties:false},activities:{type:'array',items:{type:'object',properties:{phaseId:{type:'string'},activityId:{type:'string'},...Object.fromEntries(fields.map(f=>[f.key,{type:'number',...(f.key==='cars'?{description:'Gesamtzahl der eingesetzten Autos je Aktivität'}:f.key==='cycles'?{description:'0 = keine Übernachtungen. Pro Hotelzyklus müssen mindestens 2 Tage vorgesehen sein.'}:{}),minimum:0}]))},required:['phaseId','activityId'],additionalProperties:false}}},additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute:input=>{
+      checkObject(input,['eurChfRate','rates','activities']);const copy=JSON.parse(JSON.stringify(state));
+      const validNumber=(value,key)=>{if(typeof value!=='number'||!Number.isFinite(value)||value<0||(key==='eurChfRate'&&value===0))throw new Error('Ungültiger Zahlenwert: '+key);return String(value);};
+      if(input.eurChfRate!==undefined)copy.eurChfRate=validNumber(input.eurChfRate,'eurChfRate');
+      if(input.rates!==undefined){checkObject(input.rates,Object.keys(rateLabels));for(const [key,value] of Object.entries(input.rates))copy.rates[key]=validNumber(value,key);}
+      if(input.activities!==undefined){if(!Array.isArray(input.activities))throw new Error('Ungültige Aktivitäten.');for(const change of input.activities){checkObject(change,['phaseId','activityId',...fields.map(f=>f.key)]);const activity=getPhase(copy,change.phaseId).activities.find(a=>a.id===change.activityId);if(!activity)throw new Error('Aktivität nicht gefunden.');for(const f of fields)if(Object.hasOwn(change,f.key))activity[f.key]=validNumber(change[f.key],f.key);}}
+      for(const phase of copy.phases)for(const activity of phase.activities){if(hotelCyclesExceedDays(parseNumber(activity.days),parseNumber(activity.cycles)))throw new Error(phaseName(phase)+' / '+activityName(activity)+': Pro Hotelzyklus sind mindestens 2 Tage erforderlich.');}
+      state.eurChfRate=copy.eurChfRate;byId('eur-chf-rate').value=state.eurChfRate;state.rates=copy.rates;state.phases=copy.phases;for(const key of Object.keys(rateLabels))byId('rate-'+key).value=state.rates[key];renderEditor();changed();
+      return {totalCHF:lastResult.total,totalEUR:lastResult.eur.total,eurChfRate:lastResult.eurChfRate,phaseCount:state.phases.length,exportRequired:true};
+    }});
+    window.addEventListener('pagehide',event=>{if(!event.persisted)lifecycle.abort();},{once:true});
+  }
+})();
+
+  </script></body></html>
